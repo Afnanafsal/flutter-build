@@ -1,6 +1,6 @@
 # 🛠️ Flutter Build & Telegram Release Action
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/afnanafsal/flutter-build/example.yml?label=Build%20Status&logo=github&style=for-the-badge)](https://github.com/Afnanafsal/flutter-build/actions/workflows/example.yml)
+[![Build Status](https://img.shields.io/badge/Build%20Status-Online-brightgreen?style=for-the-badge&logo=github)](https://github.com/Afnanafsal/flutter-build/actions/workflows/example.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Flutter](https://img.shields.io/badge/Flutter-%E2%9D%A4-blue?logo=flutter)
 ![GitHub Release](https://img.shields.io/github/v/release/afnanafsal/flutter-build)
