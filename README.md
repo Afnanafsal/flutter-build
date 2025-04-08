@@ -13,7 +13,7 @@ This GitHub Action builds your Flutter APK and sends it to a Telegram group auto
 | `java_version`    | Java version                   | ❌       | `17`        |
 
 
-[![Build & Telegram 📱](https://img.shields.io/github/actions/workflow/status/afnanafsal/flutter-build-release/action.yml?label=Flutter%20Release&logo=flutter&style=flat-square)](https://github.com/afnanafsal/flutter-build-release/actions)
+[![Build & Telegram 📱](https://img.shields.io/github/actions/workflow/status/afnanafsal/flutter-build/action.yml?label=Flutter%20Release&logo=flutter&style=flat-square)](https://github.com/afnanafsal/flutter-build/actions)
 
 
 
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 🔨 Flutter Build & Telegram Release
-        uses: afnanafsal/flutter-build-release@v1
+        uses: afnanafsal/flutter-build@v1
         with:
           telegram_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           telegram_chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
