@@ -1,0 +1,20 @@
+name: 🚀 Flutter Build in telegram
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🔧 Flutter Build & Release
+        uses: ./github/actions/flutter_build
+        with:
+          telegram_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram_chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          flutter_version: '3.19.0'
+          java_version: '17'
+          build_mode: 'all'

@@ -19,7 +19,7 @@ inputs:
     description: 'Java version'
     default: '17'
   build_mode:
-    description: 'Build mode: apk | aab | web'
+    description: 'Build mode: apk | aab | web | all'
     default: 'apk'
 
 runs:
@@ -49,7 +49,6 @@ runs:
       shell: bash
       run: |
         set -e
-        echo "🔄 Incrementing version..."
         VERSION_LINE=$(grep '^version: ' pubspec.yaml)
         VERSION_NAME=$(echo $VERSION_LINE | cut -d "+" -f1 | cut -d " " -f2)
         VERSION_CODE=$(echo $VERSION_LINE | cut -d "+" -f2)
@@ -62,20 +61,19 @@ runs:
       shell: bash
       run: flutter pub get
 
-    - name: 🔨 Build Flutter ${{ inputs.build_mode | upper }}
+    - name: 🔨 Build Flutter ${{ inputs.build_mode }}
       shell: bash
       run: |
         set -e
-        echo "🏗️ Building for mode: ${{ inputs.build_mode }}"
-        if [[ "${{ inputs.build_mode }}" == "apk" ]]; then
+        MODE="${{ inputs.build_mode }}"
+        if [[ "$MODE" == "apk" || "$MODE" == "all" ]]; then
           flutter build apk --split-per-abi --release
-        elif [[ "${{ inputs.build_mode }}" == "aab" ]]; then
+        fi
+        if [[ "$MODE" == "aab" || "$MODE" == "all" ]]; then
           flutter build appbundle --release
-        elif [[ "${{ inputs.build_mode }}" == "web" ]]; then
+        fi
+        if [[ "$MODE" == "web" || "$MODE" == "all" ]]; then
           flutter build web
-        else
-          echo "❌ Invalid build_mode provided."
-          exit 1
         fi
 
     - name: 🚀 Release to GitHub
@@ -96,13 +94,11 @@ runs:
     - name: 📤 Send to Telegram
       shell: bash
       run: |
-        echo "📡 Sending Telegram message..."
         curl -s -X POST https://api.telegram.org/bot${{ inputs.telegram_token }}/sendMessage \
           -d chat_id=${{ inputs.telegram_chat_id }} \
           -d text="🛠️ *Build Started*: \`${{ github.repository }}\` by \`${{ github.actor }}\`" \
           -d parse_mode=Markdown
 
-        echo "📦 Sending APK/AAB..."
         FILES=$(find build/app/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \))
         for file in $FILES; do
           curl -s -F chat_id=${{ inputs.telegram_chat_id }} \
