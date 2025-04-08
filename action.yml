@@ -1,6 +1,6 @@
-name: 📦 Flutter APK Builder & Telegram Releaser
-description: Build Flutter APK, auto-version, release to GitHub and Telegram.
-author: Afnan Afsal <afnanafsal@gmail.com>
+name: 🛠️ Flutter Multi-Build & Telegram Release
+description: Build Flutter APKs/AABs/Web, send to GitHub Releases & Telegram.
+author: Afnan Afsal
 
 inputs:
   telegram_token:
@@ -10,19 +10,22 @@ inputs:
     description: 'Telegram Chat ID or Group ID'
     required: true
   github_token:
-    description: 'GitHub Token'
+    description: 'GitHub Token for release'
     required: true
   flutter_version:
-    description: 'Flutter version (default: 3.19.0)'
+    description: 'Flutter version'
     default: '3.19.0'
   java_version:
-    description: 'Java version (default: 17)'
+    description: 'Java version'
     default: '17'
+  build_mode:
+    description: 'Build mode: apk | aab | web'
+    default: 'apk'
 
 runs:
   using: "composite"
   steps:
-    - name: 🧾 Checkout Repository
+    - name: 📁 Checkout
       uses: actions/checkout@v4
 
     - name: ☕ Set up Java
@@ -36,49 +39,75 @@ runs:
       with:
         flutter-version: ${{ inputs.flutter_version }}
 
-    - name: 💾 Cache Flutter pub
+    - name: 📦 Cache Flutter
       uses: actions/cache@v3
       with:
         path: ~/.pub-cache
-        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pub-
+        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
 
     - name: 📊 Auto-increment version
       shell: bash
       run: |
+        set -e
+        echo "🔄 Incrementing version..."
         VERSION_LINE=$(grep '^version: ' pubspec.yaml)
         VERSION_NAME=$(echo $VERSION_LINE | cut -d "+" -f1 | cut -d " " -f2)
         VERSION_CODE=$(echo $VERSION_LINE | cut -d "+" -f2)
         NEW_CODE=$((VERSION_CODE + 1))
-        echo "New Version: $VERSION_NAME+$NEW_CODE"
-        sed -i "s/^version: .*/version: $VERSION_NAME+$NEW_CODE/" pubspec.yaml
+        NEW_VERSION="${VERSION_NAME}+${NEW_CODE}"
+        sed -i "s/^version: .*/version: $NEW_VERSION/" pubspec.yaml
+        echo "✅ Version updated to $NEW_VERSION"
 
-    - name: 📦 Install Dependencies
+    - name: 📥 Install dependencies
       shell: bash
       run: flutter pub get
 
-    - name: 🛠️ Build APK
+    - name: 🔨 Build Flutter ${{ inputs.build_mode | upper }}
       shell: bash
-      run: flutter build apk --split-per-abi --release --no-shrink --no-tree-shake-icons
+      run: |
+        set -e
+        echo "🏗️ Building for mode: ${{ inputs.build_mode }}"
+        if [[ "${{ inputs.build_mode }}" == "apk" ]]; then
+          flutter build apk --split-per-abi --release
+        elif [[ "${{ inputs.build_mode }}" == "aab" ]]; then
+          flutter build appbundle --release
+        elif [[ "${{ inputs.build_mode }}" == "web" ]]; then
+          flutter build web
+        else
+          echo "❌ Invalid build_mode provided."
+          exit 1
+        fi
 
-    - name: 🚀 Create GitHub Release
+    - name: 🚀 Release to GitHub
       uses: ncipollo/release-action@v1
       with:
         tag: v${{ github.run_number }}
-        name: "Release Build #${{ github.run_number }}"
+        name: "Build ${{ github.run_number }}"
         token: ${{ inputs.github_token }}
-        artifacts: |
-          build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
         body: |
-          ✅ Auto-release APK for Flutter project.
-          🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }})
+          ### 🔖 Release Notes
+          - Auto-built by GitHub Action
+          - Version: `${{ github.run_number }}`
+          - Triggered by: `${{ github.actor }}`
+        artifacts: |
+          build/app/outputs/flutter-apk/*.apk
+          build/app/outputs/bundle/release/*.aab
 
-    - name: 📤 Send APK to Telegram
+    - name: 📤 Send to Telegram
       shell: bash
       run: |
-        curl -s -F chat_id=${{ inputs.telegram_chat_id }} \
-             -F document=@build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-             -F caption="✅ *New Flutter APK Build*\n📦 Build #${{ github.run_number }}\n🔗 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }})" \
-             -F parse_mode=Markdown \
-             https://api.telegram.org/bot${{ inputs.telegram_token }}/sendDocument
+        echo "📡 Sending Telegram message..."
+        curl -s -X POST https://api.telegram.org/bot${{ inputs.telegram_token }}/sendMessage \
+          -d chat_id=${{ inputs.telegram_chat_id }} \
+          -d text="🛠️ *Build Started*: \`${{ github.repository }}\` by \`${{ github.actor }}\`" \
+          -d parse_mode=Markdown
+
+        echo "📦 Sending APK/AAB..."
+        FILES=$(find build/app/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \))
+        for file in $FILES; do
+          curl -s -F chat_id=${{ inputs.telegram_chat_id }} \
+               -F document=@"$file" \
+               -F caption="📤 *Flutter Release File*\n📁 ${file}" \
+               -F parse_mode=Markdown \
+               https://api.telegram.org/bot${{ inputs.telegram_token }}/sendDocument
+        done
