@@ -12,6 +12,10 @@ This GitHub Action builds your Flutter APK and sends it to a Telegram group auto
 | `flutter_version` | Flutter version                | ❌       | `3.19.0`    |
 | `java_version`    | Java version                   | ❌       | `17`        |
 
+
+[![Reusable Flutter Build](https://github.com/afnanafsal/flutter-build-release/actions/workflows/action.yml/badge.svg)](https://github.com/afnanafsal/flutter-build-release/actions)
+
+
 ## 🚀 Usage
 
 ```yaml
