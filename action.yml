@@ -1,0 +1,84 @@
+name: 📦 Flutter APK Builder & Telegram Releaser
+description: Build Flutter APK, auto-version, release to GitHub and Telegram.
+author: Afnan Afsal <afnanafsal@gmail.com>
+
+inputs:
+  telegram_token:
+    description: 'Telegram Bot Token'
+    required: true
+  telegram_chat_id:
+    description: 'Telegram Chat ID or Group ID'
+    required: true
+  github_token:
+    description: 'GitHub Token'
+    required: true
+  flutter_version:
+    description: 'Flutter version (default: 3.19.0)'
+    default: '3.19.0'
+  java_version:
+    description: 'Java version (default: 17)'
+    default: '17'
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🧾 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: ☕ Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: ${{ inputs.java_version }}
+
+    - name: 🎯 Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ inputs.flutter_version }}
+
+    - name: 💾 Cache Flutter pub
+      uses: actions/cache@v3
+      with:
+        path: ~/.pub-cache
+        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pub-
+
+    - name: 📊 Auto-increment version
+      shell: bash
+      run: |
+        VERSION_LINE=$(grep '^version: ' pubspec.yaml)
+        VERSION_NAME=$(echo $VERSION_LINE | cut -d "+" -f1 | cut -d " " -f2)
+        VERSION_CODE=$(echo $VERSION_LINE | cut -d "+" -f2)
+        NEW_CODE=$((VERSION_CODE + 1))
+        echo "New Version: $VERSION_NAME+$NEW_CODE"
+        sed -i "s/^version: .*/version: $VERSION_NAME+$NEW_CODE/" pubspec.yaml
+
+    - name: 📦 Install Dependencies
+      shell: bash
+      run: flutter pub get
+
+    - name: 🛠️ Build APK
+      shell: bash
+      run: flutter build apk --split-per-abi --release --no-shrink --no-tree-shake-icons
+
+    - name: 🚀 Create GitHub Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: v${{ github.run_number }}
+        name: "Release Build #${{ github.run_number }}"
+        token: ${{ inputs.github_token }}
+        artifacts: |
+          build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+        body: |
+          ✅ Auto-release APK for Flutter project.
+          🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }})
+
+    - name: 📤 Send APK to Telegram
+      shell: bash
+      run: |
+        curl -s -F chat_id=${{ inputs.telegram_chat_id }} \
+             -F document=@build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+             -F caption="✅ *New Flutter APK Build*\n📦 Build #${{ github.run_number }}\n🔗 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }})" \
+             -F parse_mode=Markdown \
+             https://api.telegram.org/bot${{ inputs.telegram_token }}/sendDocument
