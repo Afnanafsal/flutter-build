@@ -106,7 +106,3 @@ After each run, your build is:
 `Flutter`, `GitHub Actions`, `Telegram`, `CI/CD`, `Automation`, `APK`, `AAB`, `Web`
 
 ---
-
-## 🧠 Made With ❤️ by [Afnan Afsal](https://github.com/afnanafsal)
-
-💬 Feel free to open issues or contribute via PRs!
